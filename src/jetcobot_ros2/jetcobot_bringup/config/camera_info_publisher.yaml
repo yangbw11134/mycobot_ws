@@ -1,0 +1,4 @@
+/**:
+    ros__parameters:
+        camera_info_url: "package://jetcobot_bringup/config/ov3360_1_calib.yaml"
+        publish_rate: 1.0
