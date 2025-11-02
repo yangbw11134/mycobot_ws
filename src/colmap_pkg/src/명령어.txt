@@ -1,0 +1,11 @@
+# 1단계: 비디오 촬영 (60초)
+python3 src/0_run_video.py 60
+
+# 2단계: 프레임 추출 (100장)
+python3 src/1_captrue_frame_image.py --video video_scans/rotation_scan_*.mp4 --out frames_100 --num 100
+
+# 3단계: SAM 마스킹
+python3 src/2_sam_image.py --frames-dir frames_100 --out-dir sam_out --sam /path/to/sam_vit_h_4b8939.pth
+
+# 4단계: COLMAP 3D 복원
+python3 src/3_run_colmap.py --images-dir sam_out/masked_images --project-dir colmap_project
