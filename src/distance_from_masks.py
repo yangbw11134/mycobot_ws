@@ -131,3 +131,13 @@ def main():
 
 if __name__ == "__main__":
     main()
+
+
+""" 사용방식 아래 코드 터미널에서 실행
+python3 distance_from_masks.py\
+--S1 /(마스크 이미지 경로)\
+--S2 /(마스크 이미지 경로)\
+--deltaD (cm로 수치 넣기)\
+--auto_dirction \
+--morph 1
+"""
