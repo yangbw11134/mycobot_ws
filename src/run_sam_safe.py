@@ -122,3 +122,16 @@ process_one(D2_IMG, "D2")
 
 if torch.cuda.is_available():
     torch.cuda.empty_cache()
+
+""" 
+사용방식 
+source ~/sam_venv/bin/activate 
+python3 run_sam_safe.py
+가상환경 키고 실행 (가상환경 안쓰고는? 안해봐서 모름)
+
+(1) 경로/모델 쪽에서 이미지를 어디에 저장할건지, sam 실행 파일 경로 확인후 고쳐야함
+((로봇 사용했을 땐 로봇의 라즈베리 파이에서 사진을 받아와서 실행해야함 + 
+main 마스크 이미지에 대해서 물체 같아보이는거 선택하게 했는데 이후에 카메라 중심점에 가까운 마스킹 이미지로 선택하는걸로 바꿔야함))
+"""
+
+
