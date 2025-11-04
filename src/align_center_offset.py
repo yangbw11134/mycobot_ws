@@ -6,6 +6,9 @@ align_center_offset.py
   프레임 중심 간 2D 오프셋을 계산하고 시각화
 - PCA 고유값/이방성(λ1/λ2) 출력 → 각도 신뢰도 판단
 
+anisotropy_ratio 값이 1에 가까우면 정사각형 형태라 회전각도에 대해서 갑자기 값이 튀어서 각도가 171정도 나타나는 현상 발생
+그래서 1에 가까우면 경고메세지 뜨게 했음
+
 사용방식 
 python3 align_center_offset.py \
   --image /home/yuni/mycobot_ws/capture_D1.jpg \
