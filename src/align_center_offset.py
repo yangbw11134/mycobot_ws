@@ -5,22 +5,44 @@ align_center_offset.py
 - 외부 마스크(흑백 PNG 또는 .npy)만 사용해 물체 중심/PCA와
   프레임 중심 간 2D 오프셋을 계산하고 시각화
 - PCA 고유값/이방성(λ1/λ2) 출력 → 각도 신뢰도 판단
+- Homography YAML를 넣으면 픽셀→실좌표(mm)로 변환하여 ΔX, ΔY(mm) 자동 산출
+  * homography_click_calibrate.py로 H(3x3) 저장 (키: "H")
 
-anisotropy_ratio 값이 1에 가까우면 정사각형 형태라 회전각도에 대해서 갑자기 값이 튀어서 각도가 171정도 나타나는 현상 발생
-그래서 1에 가까우면 경고메세지 뜨게 했음
-
-사용방식 
+사용방식
 python3 align_center_offset.py \
   --image /home/yuni/mycobot_ws/capture_D1.jpg \
   --mask  /home/yuni/mycobot_ws/sam_output/D1/capture_mask_main.png \
   --largest_contour --morph_open 1 --morph_close 1 \
-  # --mm_per_px 0.35 \ 하나의 픽셀이 몇 mm에 해당하는지 측정해야함!
+  --homography_yaml /home/yuni/mycobot_ws/homography.yaml \
   --out_dir /home/yuni/mycobot_ws/PCA_json
+
 """
 
 import os, json, argparse, math
 import numpy as np
 import cv2
+
+def load_yaml_like(path):
+    """YAML(권장) 또는 JSON 텍스트를 로드."""
+    try:
+        import yaml  # pip install pyyaml
+        with open(path, "r", encoding="utf-8") as f:
+            return yaml.safe_load(f)
+    except Exception:
+        import json as _json
+        with open(path, "r", encoding="utf-8") as f:
+            txt = f.read()
+        try:
+            return _json.loads(txt)
+        except Exception as e:
+            raise RuntimeError(f"[ERR] YAML/JSON 로드 실패: {e}")
+
+def apply_H(H, u, v):
+    """픽셀 (u,v) → 실좌표(mm) (X,Y), Homography 3x3 적용."""
+    p = np.array([u, v, 1.0], dtype=np.float64)
+    q = H @ p
+    q /= (q[2] if abs(q[2]) > 1e-12 else 1.0)
+    return float(q[0]), float(q[1])
 
 def load_image(path):
     img = cv2.imread(path, cv2.IMREAD_COLOR)
@@ -123,6 +145,7 @@ def main():
     ap.add_argument("--morph_close", type=int, default=0, help="닫기 반복 횟수(구멍 메우기)")
     ap.add_argument("--largest_contour", action="store_true", help="가장 큰 컨투어만 남김")
     ap.add_argument("--mm_per_px", type=float, default=None, help="픽셀→mm 스케일(예: 0.35)")
+    ap.add_argument("--homography_yaml", default=None, help="픽셀→mm 변환용 Homography YAML 경로(H 키 포함)")
     ap.add_argument("--out_dir", default="./out")
     args = ap.parse_args()
 
@@ -144,10 +167,22 @@ def main():
     u_norm = du / (W * 0.5)
     v_norm = dv / (H * 0.5)
 
+    # mm 변환 (우선순위: Homography → mm_per_px)
     dx_mm = dy_mm = None
-    if args.mm_per_px is not None:
+    X_mm = Y_mm = Xc_mm = Yc_mm = None  # (선택) 실제 좌표 기록
+
+    if args.homography_yaml:
+        dataH = load_yaml_like(args.homography_yaml)
+        Hmat = np.array(dataH["H"], dtype=np.float64)  # 키 이름: "H"
+        # 물체 중심 / 카메라 중심을 mm 좌표로 변환
+        X_mm, Y_mm   = apply_H(Hmat, obj_cx, obj_cy)
+        Xc_mm, Yc_mm = apply_H(Hmat, cam_cx, cam_cy)
+        dx_mm = X_mm - Xc_mm
+        dy_mm = Y_mm - Yc_mm
+    elif args.mm_per_px is not None:
         dx_mm = du * args.mm_per_px
         dy_mm = dv * args.mm_per_px
+
 
     overlay_path = os.path.join(args.out_dir, "overlay.png")
     draw_overlay(img, mask, cam_cx, cam_cy, obj_cx, obj_cy, angle_deg, du, dv,
@@ -164,24 +199,31 @@ def main():
         "anisotropy_ratio": anisotropy,  # ← 각도 신뢰도 판단 지표
         "has_mm": args.mm_per_px is not None,
         "mm_per_px": args.mm_per_px,
+        "has_mm": (dx_mm is not None and dy_mm is not None),   # ← H 또는 mm_per_px로 계산됐는지 여부
+        "offset_mm": {"dx_mm": dx_mm, "dy_mm": dy_mm} if (dx_mm is not None and dy_mm is not None) else None,
+        "homography_yaml": args.homography_yaml,
+        "object_world_mm": {"X": X_mm, "Y": Y_mm} if (X_mm is not None and Y_mm is not None) else None,
+        "center_world_mm": {"Xc": Xc_mm, "Yc": Yc_mm} if (Xc_mm is not None and Yc_mm is not None) else None,
         "offset_mm": {"dx_mm": dx_mm, "dy_mm": dy_mm} if args.mm_per_px is not None else None
     }
     with open(os.path.join(args.out_dir, "metrics.json"), "w", encoding="utf-8") as f:
         json.dump(metrics, f, ensure_ascii=False, indent=2)
 
     print("==== 2D Centering Metrics (Depth-free; mask-only) ====")
-    print(f"Image size: W={W}, H={H}")
     print(f"Camera center (px):  u0={cam_cx:.2f}, v0={cam_cy:.2f}")
     print(f"Object  center (px):  u ={obj_cx:.2f}, v ={obj_cy:.2f}")
-    print(f"Offset  (px):        Δu={du:.2f}, Δv={dv:.2f}")
-    print(f"Offset  (norm):      u_norm={u_norm:.3f}, v_norm={v_norm:.3f}")
     print(f"PCA major angle:     {angle_deg:.2f} deg")
-    print(f"Eigenvalues:         λ1={lam1:.3f}, λ2={lam2:.3f}")
     print(f"Anisotropy λ1/λ2:    {anisotropy:.3f}")
     if anisotropy < 1.2:
         print("⚠️  정사각형/원형 또는 노이즈 영향 → 각도 신뢰도 낮음(사용 비추천).")
-    if args.mm_per_px is not None:
-        print(f"Offset  (mm):        dx={dx_mm:.2f} mm, dy={dy_mm:.2f} mm")
+    if dx_mm is not None and dy_mm is not None:
+        src = "H" if args.homography_yaml else "mm_per_px"
+        print(f"Offset  (mm):        dx={dx_mm:.2f} mm, dy={dy_mm:.2f} mm   [{src}]")
+    if X_mm is not None and Y_mm is not None:
+        print(f"Object world (mm):   X={X_mm:.2f}, Y={Y_mm:.2f}")
+    if Xc_mm is not None and Yc_mm is not None:
+        print(f"Center world (mm):   Xc={Xc_mm:.2f}, Yc={Yc_mm:.2f}")
+
     print(f"[Saved] overlay: {overlay_path}")
     print(f"[Saved] metrics: {os.path.join(args.out_dir, 'metrics.json')}")
     print("======================================================")
