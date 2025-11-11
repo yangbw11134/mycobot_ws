@@ -6,10 +6,14 @@ int main() {
     // ====== 환경 변수 (필요 시 여기만 수정) ======
     const char* ROBOT_USER = "cocobot";
     const char* ROBOT_IP   = "192.168.0.122";
-    const char* REMOTE_PICS = "/home/cocobot/Pictures/snap*.jpg"; // 원격 저장 경로 패턴
+    const char* REMOTE_PICS = "'/home/cocobot/Pictures/snap*.jpg'"; // 원격 저장 경로 패턴
     const char* LOCAL_DIR  = "/home/kangmg/Downloads/";           // 내 노트북 저장 폴더
     // ===========================================
-
+    
+    
+    
+    // 0) 컨베이어벨트이동 (로봇은 기본포즈)
+	
     // 1) 로봇에서 ROS 환경 로드 후 snap_move_and_snap 실행
     std::string cmd1 =
  	 "ssh cocobot@192.168.0.122 "
@@ -39,7 +43,11 @@ int main() {
         std::cerr << "[err] 파일 가져오기 실패 (code=" << ret2 << ")\n";
         return 2;
     }
-
+    // 3)불러온 사진 SAM처리
+    
+    
+    // 4)PCA계산, 1차추정 ,픽앤플레이스, 다시 기본포즈로
+    
     std::cout << "[ok] 완료! 사진이 " << LOCAL_DIR << " 로 복사되었습니다.\n";
     return 0;
 }
