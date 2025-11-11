@@ -17,7 +17,7 @@ from datetime import datetime
 class RotateCamera:
     """회전하면서 비디오 촬영하는 클래스"""
     
-    def __init__(self, camera_id=4, output_dir="video_scans", rotation_timeout=120):
+    def __init__(self, camera_id=2, output_dir="video_scans", rotation_timeout=120):
         self.camera_id = camera_id
         self.output_dir = output_dir
         self.rotation_timeout = rotation_timeout  # 회전 완료 최대 대기 시간 (초)
@@ -53,10 +53,51 @@ class RotateCamera:
             return None
     
     def init_camera(self):
-        """로지텍 C922 카메라 초기화"""
-        cap = cv2.VideoCapture(self.camera_id)
-        if not cap.isOpened():
-            print(f"❌ 카메라 {self.camera_id}를 열 수 없습니다.")
+        """로지텍 C922 외장 카메라 초기화 (노트북 웹캠 제외)"""
+        # Logitech 외장 카메라 우선 (0-3번: Logitech BRIO)
+        # USB2.0 HD UVC WebCam (4-7번)은 노트북 웹캠
+        camera_ids = [0, 2, 1, 3]  # Logitech 카메라 우선 순위
+        cap = None
+        
+        print("🔍 외장 카메라 검색 중... (노트북 웹캠 제외)")
+        
+        for cam_id in camera_ids:
+            print(f"  카메라 {cam_id} 확인 중...", end=" ")
+            test_cap = cv2.VideoCapture(cam_id)
+            
+            if not test_cap.isOpened():
+                print("❌ 열리지 않음")
+                test_cap.release()
+                continue
+            
+            # 해상도 테스트 (외장 카메라는 1080p 지원)
+            test_cap.set(cv2.CAP_PROP_FRAME_WIDTH, 1920)
+            test_cap.set(cv2.CAP_PROP_FRAME_HEIGHT, 1080)
+            
+            # 실제 설정된 해상도 확인
+            width = int(test_cap.get(cv2.CAP_PROP_FRAME_WIDTH))
+            height = int(test_cap.get(cv2.CAP_PROP_FRAME_HEIGHT))
+            
+            # 1080p 또는 최소 720p 지원하는 외장 카메라만 선택
+            if width >= 1920 and height >= 1080:
+                print(f"✅ 1080p 카메라 발견! ({width}x{height})")
+                cap = test_cap
+                self.camera_id = cam_id
+                break
+            elif width >= 1280 and height >= 720:
+                print(f"✅ 720p+ 카메라 ({width}x{height})")
+                cap = test_cap
+                self.camera_id = cam_id
+                break
+            else:
+                print(f"⚠️ 해상도 부족 ({width}x{height}), 웹캠으로 추정")
+                test_cap.release()
+        
+        if cap is None or not cap.isOpened():
+            print(f"\n❌ 외장 카메라를 찾을 수 없습니다.")
+            print(f"   확인 사항:")
+            print(f"   - 로지텍 C922 카메라가 연결되어 있나요?")
+            print(f"   - 다른 프로그램에서 카메라를 사용 중인가요?")
             return None
         
         # 로지텍 C922 최적 설정
@@ -100,8 +141,10 @@ class RotateCamera:
             return False
         
         try:
-            # 아두이노 버퍼 비우기
+            # 아두이노 버퍼 완전히 비우기
             self.arduino.reset_input_buffer()
+            self.arduino.reset_output_buffer()
+            time.sleep(0.2)  # 버퍼 비우기 대기
             
             # 연속 회전 명령 (360도)
             gear_ratio = 6.0
@@ -114,9 +157,13 @@ class RotateCamera:
             else:
                 command = f"1{abs(total_steps):05d}"
             
-            self.arduino.write(command.encode())
-            self.arduino.write(b'\n')
-            print(f"✅ 연속 회전 명령 전송: {total_steps} 스텝 (360도)")
+            # 명령어를 한 번에 전송 (개행 포함)
+            full_command = command + "\n"
+            print(f"✅ 회전 명령 전송: {command} ({total_steps} 스텝, 360도)")
+            print(f"   전송 바이트: {full_command.encode()}")
+            self.arduino.write(full_command.encode())
+            self.arduino.flush()  # 버퍼를 즉시 전송
+            print(f"✅ 회전 명령 전송 완료")
             
             return True
         except Exception as e:
@@ -185,7 +232,21 @@ class RotateCamera:
         # 아두이노로 연속 회전 시작
         rotation_started = False
         if self.arduino:
+            # 아두이노 버퍼를 한 번 더 비우기 (시간이 오래 지났을 수 있음)
+            try:
+                self.arduino.reset_input_buffer()
+                self.arduino.reset_output_buffer()
+                time.sleep(0.1)
+                print("🔄 아두이노 버퍼 재초기화 완료")
+            except Exception as e:
+                print(f"⚠️ 버퍼 초기화 경고: {e}")
+            
             rotation_started = self.start_continuous_rotation()
+            
+            # 명령 전송 후 짧은 대기 (아두이노가 명령을 받을 시간)
+            if rotation_started:
+                time.sleep(0.3)
+                print("⏳ 아두이노 명령 처리 대기 완료")
         
         start_time = time.time()
         frame_count = 0
