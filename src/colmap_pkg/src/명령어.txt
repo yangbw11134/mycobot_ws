@@ -1,11 +1,79 @@
-# 1단계: 비디오 촬영 (60초)
+# ============================================================
+# 전체 파이프라인 명령어 모음
+# ============================================================
+
+# 0️⃣ 360도 회전 비디오 촬영
 python3 src/0_run_video.py 60
 
-# 2단계: 프레임 추출 (100장)
+# 1️⃣ 프레임 추출 (100개)
 python3 src/1_captrue_frame_image.py --video video_scans/rotation_scan_*.mp4 --out frames_100 --num 100
 
-# 3단계: SAM 마스킹
-python3 src/2_sam_image.py --frames-dir frames_100 --out-dir sam_out --sam /path/to/sam_vit_h_4b8939.pth
+# 2️⃣ SAM 배경 제거 & 마스킹
+python3 src/2_sam_image.py --frames-dir frames_100 --out-dir sam_out --sam /home/yangbi/models/sam/sam_vit_h_4b8939.pth
 
-# 4단계: COLMAP 3D 복원
+# 3️⃣ COLMAP 3D 복원
 python3 src/3_run_colmap.py --images-dir sam_out/masked_images --project-dir colmap_project
+
+# 4️⃣ YOLO 데이터셋 변환
+python3 src/4_mask_to_yolo.py --sam-dir sam_out --out-dir yolo_dataset --class-name "object"
+
+# 5️⃣ YOLO 모델 학습
+python3 src/5_train_yolo.py --data yolo_dataset/data.yaml --model yolo11n-seg.pt --epochs 100 --batch 16 --name my_object
+
+# 6️⃣ 추론 (탐지/세그멘테이션)
+python3 src/6_yolo_inference.py --model runs/segment/my_object/weights/best.pt --source test_images/ --conf 0.25
+
+
+# ============================================================
+# 간단 실행 (한 줄씩)
+# ============================================================
+
+# 3D 복원만
+python3 src/0_run_video.py 60 && python3 src/1_captrue_frame_image.py --video video_scans/rotation_scan_*.mp4 --out frames_100 --num 100 && python3 src/2_sam_image.py --frames-dir frames_100 --out-dir sam_out --sam /home/yangbi/models/sam/sam_vit_h_4b8939.pth && python3 src/3_run_colmap.py --images-dir sam_out/masked_images --project-dir colmap_project
+
+# YOLO 학습만 (데이터셋 있을 때)
+python3 src/4_mask_to_yolo.py --sam-dir sam_out --out-dir yolo_dataset --class-name "object" && python3 src/5_train_yolo.py --data yolo_dataset/data.yaml --model yolo11n-seg.pt --epochs 100 --batch 16 --name my_object
+
+
+# ============================================================
+# 상세 옵션들
+# ============================================================
+
+# 0_run_video.py 옵션
+python3 src/0_run_video.py [회전시간(초)]
+# 예: python3 src/0_run_video.py 120  # 120초 촬영
+
+# 1_captrue_frame_image.py 옵션
+python3 src/1_captrue_frame_image.py --video [비디오경로] --out [출력폴더] --num [프레임수]
+# 예: python3 src/1_captrue_frame_image.py --video video.mp4 --out frames_200 --num 200
+
+# 2_sam_image.py 옵션
+python3 src/2_sam_image.py --frames-dir [프레임폴더] --out-dir [출력폴더] --sam [모델경로] --bg [white/black]
+# 예: python3 src/2_sam_image.py --frames-dir frames_100 --out-dir sam_out --sam ~/models/sam/sam_vit_h_4b8939.pth --bg white
+
+# 3_run_colmap.py 옵션
+python3 src/3_run_colmap.py --images-dir [이미지폴더] --project-dir [프로젝트폴더] --matcher [sequential/exhaustive]
+# 예: python3 src/3_run_colmap.py --images-dir sam_out/masked_images --project-dir colmap_out
+
+# 4_mask_to_yolo.py 옵션
+python3 src/4_mask_to_yolo.py --sam-dir [SAM출력폴더] --out-dir [YOLO데이터셋폴더] --class-name [클래스명] --train-ratio [학습비율]
+# 예: python3 src/4_mask_to_yolo.py --sam-dir sam_out --out-dir yolo_cup --class-name "cup" --train-ratio 0.8
+
+# 5_train_yolo.py 옵션
+python3 src/5_train_yolo.py --data [data.yaml경로] --model [모델크기] --epochs [에포크수] --batch [배치크기] --imgsz [이미지크기] --name [실험명]
+# 모델 크기: yolo11n-seg.pt (nano), yolo11s-seg.pt (small), yolo11m-seg.pt (medium), yolo11l-seg.pt (large)
+# 예: python3 src/5_train_yolo.py --data yolo_dataset/data.yaml --model yolo11m-seg.pt --epochs 200 --batch 8 --name high_quality
+
+# 6_yolo_inference.py 옵션
+python3 src/6_yolo_inference.py --model [모델경로] --source [소스] --conf [신뢰도] --iou [IoU임계값] --show
+# 소스: 이미지파일, 비디오파일, 폴더경로, 웹캠(0)
+# 예: python3 src/6_yolo_inference.py --model runs/segment/train/weights/best.pt --source 0 --conf 0.3 --show
+
+
+# ============================================================
+# 필요 패키지 설치
+# ============================================================
+
+# 전체 설치 (한번만)
+pip3 install torch torchvision ultralytics pyyaml opencv-python numpy --user
+pip3 install git+https://github.com/facebookresearch/segment-anything.git --user
