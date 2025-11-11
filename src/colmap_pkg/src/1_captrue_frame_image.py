@@ -1,4 +1,9 @@
 # 1_capture_frame_image.py
+'''
+cd /home/yangbi/mycobot_ws/src && python3 colmap_pkg/src/1_captrue_frame_image.py --video /home/yangbi/mycobot_ws/src/colmap_pkg/src/video_scans/KakaoTalk_20251111_130915799.mp4
+
+'''
+
 import argparse, cv2, numpy as np
 from pathlib import Path
 
