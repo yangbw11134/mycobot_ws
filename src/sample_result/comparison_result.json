@@ -1,0 +1,27 @@
+{
+  "metrics": {
+    "iou": 0.7268844757633995,
+    "dice": 0.8418449363175466,
+    "area_diff_pct": 3.4750911300121508,
+    "matchShapes": 0.19451470426699838,
+    "hausdorff_mm": 5.5,
+    "pca_angle_deg": 149.0233086391269,
+    "pca_angle_diff_deg": 4.6674824430531885,
+    "anisotropy_ratio": 7.0338080546763,
+    "anisotropy_diff": 1.1769239261073556
+  },
+  "thresholds": {
+    "angle_max_deg": 10.0,
+    "aniso_max_diff": 0.6,
+    "matchShapes_max": 0.15,
+    "use_iou": false,
+    "iou_min": 0.92,
+    "hausdorff_max_mm": 2.0,
+    "area_diff_max_pct": 5.0
+  },
+  "decision": "FAIL",
+  "failed_rules": [
+    "anisotropy_diff>0.6",
+    "matchShapes>0.15"
+  ]
+}

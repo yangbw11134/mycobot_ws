@@ -1,0 +1,34 @@
+{
+  "meta": {
+    "image": "/home/yangbi/mycobot_ws/src/sample_mask.png",
+    "mask": "/home/yangbi/mycobot_ws/src/sample_mask.png",
+    "homography_yaml": "/home/yangbi/mycobot_ws/src/homography.yaml",
+    "world_res_mm": 0.5,
+    "canvas_size": {
+      "width": 951,
+      "height": 424
+    }
+  },
+  "pca": {
+    "angle_deg": 149.0233086391269,
+    "eigvals": {
+      "lambda1": 855.803466796875,
+      "lambda2": 121.67000579833984
+    },
+    "anisotropy_ratio": 7.0338080546763
+  },
+  "features": {
+    "iou": 0.7268844757633995,
+    "dice": 0.8418449363175466,
+    "area_diff_pct": 3.4750911300121508,
+    "matchShapes": 0.19451470426699838,
+    "hausdorff_mm": 5.5,
+    "pca_angle_deg": 149.0233086391269,
+    "pca_angle_diff_deg": 4.6674824430531885,
+    "anisotropy_ratio": 7.0338080546763,
+    "anisotropy_diff": 1.1769239261073556
+  },
+  "files": {
+    "overlay_png": "/home/yangbi/mycobot_ws/src/sample_result/overlay.png"
+  }
+}
