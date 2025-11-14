@@ -46,6 +46,8 @@ int main() {
 
     // ===== 순차 실행 시작 =====
 
+    // 0) 컨베이어벨트 이동
+
     // 1) 기본 포즈 + 사진 촬영
     std::cout << "[run] " << cmd1 << std::endl;
     int ret1 = std::system(cmd1.c_str());
@@ -54,13 +56,15 @@ int main() {
         return 1;
     }
 
-    // 2) 사진 scp
+    // 2) 사진 scp로 불러오기
     std::cout << "[run] " << cmd2 << std::endl;
     int ret2 = std::system(cmd2.c_str());
     if (ret2 != 0) {
         std::cerr << "[err] 파일 가져오기 실패 (code=" << ret2 << ")\n";
         return 2;
     }
+
+    // 3) 사진 SAM 처리 후 1불량여부 출력
 
     // 3-1) 1차 불량 여부 수동입력
     char firstCheck;
@@ -72,7 +76,7 @@ int main() {
         return 0;
     }
 
-    // 4) 불량이면 스캔판으로 이동
+    // 4) 1차 불량이면 스캔판으로 이동
     std::cout << "[run] " << cmd4 << std::endl;
     int ret4 = std::system(cmd4.c_str());
     if (ret4 != 0) {
@@ -80,7 +84,9 @@ int main() {
         return 4;
     }
 
-    // 4-1) (스캔 자동 수행은 생략) 스캔/추가 검사 결과 수동 입력
+    // 4-1) 스캔 후 2차불량여부 출력
+
+    // 5) (스캔 자동 수행은 생략) 스캔/추가 검사 결과 수동 입력
     char secondCheck;
     std::cout << "[질문] 스캔/추가 검사 결과는 어떤가요? (g: 정상→컨베이어, b: 불량→폐기): ";
     std::cin >> secondCheck;
