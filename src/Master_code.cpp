@@ -31,13 +31,13 @@ int main() {
             source /opt/ros/humble/setup.bash;
             source ~/cobot_ws/install/setup.bash;
             python3 go_home.py;
-            ./snap_cam --dev /dev/video0 --out ~/Pictures/snap_for_pca.jpg;
+            ffmpeg -f v4l2 -i /dev/video0 -vframes 1 ~/Pictures/snap_for_pca.jpg;
         "')";
 
     // 2) 원격 사진을 내 노트북으로 가져오기
     std::string cmd2 =
-        std::string("scp ") + ROBOT_USER + "@" + ROBOT_IP + ":" + REMOTE_PICS + " " + LOCAL_DIR;
-
+        std::string("scp ") + ROBOT_USER + "@" + ROBOT_IP + ":" + REMOTE_PICS + 
+        " " + RESOURCE_DIR + "/snap2.jpg"; // <-- LOCAL_DIR 대신 이 경로를 사용
     // 3-1) SAM 처리 - 촬영된 이미지를 마스킹
     std::string cmd3 =
         "bash -lc \""
