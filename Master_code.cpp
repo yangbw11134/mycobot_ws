@@ -29,10 +29,15 @@ int main() {
     std::string cmd2 =
         std::string("scp ") + ROBOT_USER + "@" + ROBOT_IP + ":" + REMOTE_PICS + " " + LOCAL_DIR;
 
+
+    // 3) SAM처리 후 1차불량판별, 결과 출력
+
     // 4) 집어서 스캔판으로 옮기기(go_to_scan.py)
     std::string cmd4 =
         std::string("ssh ") + ROBOT_USER + "@" + ROBOT_IP +
         " 'cd ~/cobot_ws && python3 go_to_scan.py'";
+
+    // 5) 스캔 후 2차불량판별, 결과출력
 
     // 5-1) 다시 컨베이어벨트로 (go_back_to_belt.py 실행 후 home 자세)
     std::string cmd5 =
