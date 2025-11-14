@@ -49,7 +49,12 @@ int main() {
         std::string("ssh ") + ROBOT_USER + "@" + ROBOT_IP +
         " 'cd ~/cobot_ws && python3 go_to_hell.py && python3 go_home.py'";
 
+
+
+
+    
     // ===== 순차 실행 시작 =====
+    
 
     // 0) 컨베이어벨트 이동
 
